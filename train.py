@@ -5,9 +5,13 @@ from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler, LabelEnco
 from sklearn.model_selection import train_test_split
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import accuracy_score
+import os
+
+MODEL_DIR = "models"
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 # Load and preprocess data
-df = pd.read_csv("../data/Food_and_Nutrition__.csv")
+df = pd.read_csv("data/Food_and_Nutrition__.csv")
 df.columns = df.columns.str.strip().str.replace(" ", "_")
 if "Ages" in df.columns:
     df.rename(columns={"Ages": "Age"}, inplace=True)
@@ -15,7 +19,7 @@ if "Ages" in df.columns:
 # Encode diseases
 mlb = MultiLabelBinarizer()
 disease_df = pd.DataFrame(
-    mlb.fit_transform(df['Disease'].str.split(',\s*')),
+    mlb.fit_transform(df['Disease'].str.split(r',\s*')),
     columns=mlb.classes_
 )
 
@@ -53,7 +57,12 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 # Train model
 model = MultiOutputClassifier(RandomForestClassifier(
-    n_estimators=100, random_state=42))
+    n_estimators=50,
+    max_depth=12,
+    min_samples_leaf=2,
+    random_state=42,
+    n_jobs=-1
+))
 model.fit(X_train, y_train)
 
 # Evaluate
@@ -63,8 +72,8 @@ for idx, col in enumerate(y_encoded.columns):
     print(f"Accuracy for {col}: {acc:.2f}")
 
 # Save artifacts
-joblib.dump(model, 'meal_recommender.joblib')
-joblib.dump(mlb, 'mlb_encoder.joblib')
-joblib.dump(scaler, 'scaler.joblib')
-joblib.dump(X.columns.tolist(), 'feature_columns.joblib')
-joblib.dump(target_encoders, 'target_encoders.joblib')
+joblib.dump(model, f'{MODEL_DIR}/meal_recommender.joblib')
+joblib.dump(mlb, f'{MODEL_DIR}/mlb_encoder.joblib')
+joblib.dump(scaler, f'{MODEL_DIR}/scaler.joblib')
+joblib.dump(X.columns.tolist(), f'{MODEL_DIR}/feature_columns.joblib')
+joblib.dump(target_encoders, f'{MODEL_DIR}/target_encoders.joblib')
